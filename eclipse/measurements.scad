@@ -1,3 +1,5 @@
+include <../common.scad>
+
 thickness = 1.9;
 finger_d = 22;
 
@@ -71,3 +73,31 @@ ancient_count = 22;
 
 monolith_orbital_d = 25.25;
 monolith_orbital_count = 22;
+
+//
+// Game Tokens
+//
+
+sector_w = 90;
+sector_r = sector_w / (2 * cos(30));
+
+cube_w = 8.5;
+
+round_d = 15.5;
+round_h = 10.1;
+
+//
+// Player Kit
+//
+
+pop_cube_count = 34;
+influence_d = round_d;
+influence_h = 5;
+influence_count = 16;
+
+//
+// Combat Dice
+//
+
+die_w = 14.5;
+
