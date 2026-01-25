@@ -27,7 +27,7 @@ screw_h = 9;
 screw_head_h = 3;
 screw_head_d = 9;
 screw_thread_h = screw_h - screw_head_h;
-screw_thread_d = 3.75;
+screw_thread_d = 4;
 
 case_th = 2;
 
@@ -70,36 +70,40 @@ nut_slot_z = case_th + nut_th + case_th;
 hole_d = 4;
 
 mobo_screw_x1 = 10.16;
-mobo_screw_x1b = mobo_screw_x1 + 22.86;
+mobo_screw_x1b = mobo_screw_x1 + 22.5;
 mobo_screw_x2 = mobo_screw_x1 + 154.94;
 mobo_screw_y1 = 6.35;
 mobo_screw_y2 = mobo_screw_y1 + 157.48;
 
 mobo_x = 170;
+mobo_dx = 1;
 mobo_y = 170;
 mobo_th = 2;
 mobo_h = mount_h - case_th; // Distance above the baseplate.
+mobo_io_dy1 = 11.5;
+mobo_io_dy2 = 6.5;
 io_x = 3;
-io_y = 159;
+io_y = mobo_y - mobo_io_dy1 + mobo_io_dy2;
 io_z = 50;
-mobo_io_dz = -5 + mobo_th;
-mobo_io_dy = 5;
+mobo_io_dz = -6;
 
 interior_x = mobo_x + cable_cavity_x;
-interior_y = psu_y + case_th + max(mobo_y + mobo_io_dy, mobo_screw_y2 + mount_bot_r);
+interior_y = psu_y + case_th + max(mobo_y + mobo_io_dy2, mobo_screw_y2 + mount_bot_r) + case_th;
 interior_z = max(psu_z, mobo_h + 77 - case_th);
 exterior_x = case_th + interior_x + case_th;
 exterior_y = case_th + interior_y + case_th;
 exterior_z = case_th + interior_z + case_th;
 
 heatsink_x = 120;
-heatsink_y = 130;
-heatsink_dx = 42;
-heatsink_dy = 35;
+heatsink_y = 134;
+// About 8mm from +x of mobo, model is about 4mm wider than the real heatsink.
+heatsink_dx = mobo_x - heatsink_x - 8 + 2;
+// About 32mm from -y of mobo, model is about 4mm wider than the real heatsink.
+heatsink_dy = 32 - 2;
 
-badge_x = 1.5;
-badge_y = 26;
-badge_z = 26;
+badge_th = 1.5;
+badge_w = 26;
+badge_h = 26;
 
 function hex_d(e2e) = e2e / sin(60);
 function hex_r(e2e) = hex_d(e2e) / 2;
@@ -114,8 +118,8 @@ module screw() {
 }
 
 module badge() {
-  cube([badge_x, badge_y, badge_z]);
-  translate([badge_x, badge_y/2, 5])
+  cube([badge_th, badge_w, badge_h]);
+  translate([badge_th, badge_w/2, 5])
     rotate([90, 0, 90])
       linear_extrude(0.2)
         text("noctua", 5, halign="center");
@@ -157,7 +161,7 @@ module mobo() {
     translate([mobo_screw_x2 , mobo_screw_y2, -1]) cylinder(d=hole_d, h=mobo_th+2);
   }
   // The IO shield
-  translate([-io_x, mobo_y - io_y + mobo_io_dy, mobo_io_dz])
+  translate([-io_x, mobo_y - io_y + mobo_io_dy2, mobo_io_dz])
     cube([io_x, io_y, io_z]);
 }
 
@@ -214,30 +218,30 @@ module case() {
       difference() {
         union() {
           cube([exterior_x, exterior_y, case_th]);
-          translate([case_th, case_th + case_th]) {
-            translate([mobo_screw_x1 , psu_y + mobo_screw_y1]) mount();
-            translate([mobo_screw_x1b, psu_y + mobo_screw_y2]) mount();
-            translate([mobo_screw_x2 , psu_y + mobo_screw_y1]) mount();
-            translate([mobo_screw_x2 , psu_y + mobo_screw_y2]) mount();
+          translate([case_th + mobo_dx, case_th + psu_y + case_th]) {
+            translate([mobo_screw_x1 , mobo_screw_y1]) mount();
+            translate([mobo_screw_x1b, mobo_screw_y2]) mount();
+            translate([mobo_screw_x2 , mobo_screw_y1]) mount();
+            translate([mobo_screw_x2 , mobo_screw_y2]) mount();
           }
         }
-        translate([case_th, case_th + case_th]) {
-          translate([mobo_screw_x1 , psu_y + mobo_screw_y1, -1]) {
+        translate([case_th + mobo_dx, case_th + psu_y + case_th]) {
+          translate([mobo_screw_x1 , mobo_screw_y1, -1]) {
             hex(nut_e2e, h=nut_h+1);
             translate([0, 0, nut_h])
               cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
           }
-          translate([mobo_screw_x1b, psu_y + mobo_screw_y2, -1]) {
+          translate([mobo_screw_x1b, mobo_screw_y2, -1]) {
             hex(nut_e2e, h=nut_h+1);
             translate([0, 0, nut_h])
               cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
           }
-          translate([mobo_screw_x2 , psu_y + mobo_screw_y1, -1]) {
+          translate([mobo_screw_x2 , mobo_screw_y1, -1]) {
             hex(nut_e2e, h=nut_h+1);
             translate([0, 0, nut_h])
               cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
           }
-          translate([mobo_screw_x2 , psu_y + mobo_screw_y2, -1]) {
+          translate([mobo_screw_x2 , mobo_screw_y2, -1]) {
             hex(nut_e2e, h=nut_h+1);
             translate([0, 0, nut_h])
               cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
@@ -246,8 +250,9 @@ module case() {
       }
       // PSU fence
       translate([case_th, case_th, case_th]) {
-        translate([psu_x, 0, 0]) cube([case_th, psu_y, 10]);
-        translate([0, psu_y, 0]) cube([psu_x + case_th, case_th, 10]);
+        th = case_th / 2;
+        translate([psu_x + th/2,            0, 0]) cube([               th, psu_y + th + th/2, mobo_h]);
+        translate([           0, psu_y + th/2, 0]) cube([psu_x + th + th/2,                th, mobo_h]);
       }
       // Sides of the case, all z dimensions are - case_th to leave space for the lid.
       cube([case_th, exterior_y, exterior_z - case_th]);
@@ -267,7 +272,7 @@ module case() {
     // IO hole
     translate([
       -1,
-      case_th + psu_y + case_th + mobo_y + mobo_io_dy - io_y,
+      case_th + psu_y + case_th + mobo_y + mobo_io_dy2 - io_y,
       case_th + mobo_h + mobo_io_dz
     ]) cube([case_th+2, io_y, io_z]);
     // CPU intake vent hole
@@ -291,23 +296,23 @@ module case() {
     // PSU power plug hole
     translate([
       -1,
-      case_th + power_dy,
+      case_th + psu_y - power_y - power_dy,
       case_th + psu_z - power_z - power_dz
     ]) cube([case_th+2, power_y, power_z]);
     // PSU screws, back, clockwise starting from top
     translate([
       -1,
-      case_th + psu_y - 3.5,
+      case_th + 3.5,
       case_th + psu_z - 15.5
     ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
     translate([
       -1,
-      case_th + psu_y - 4.75,
+      case_th + 4.75,
       case_th + 5.75
     ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
     translate([
       -1,
-      case_th + 4.5,
+      case_th + psu_y - 4.5,
       case_th + 5.75
     ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
     // PSU screws, front
@@ -323,8 +328,7 @@ module case() {
     ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
 
     // Noctua badge power button hole
-    translate([exterior_x - case_th - 1, (exterior_y - badge_y) / 2, (exterior_z - badge_z) / 2]) cube([case_th + 2, badge_y, badge_z]);
-    // badge();
+    translate([exterior_x - case_th - 1, (exterior_y - badge_w) / 2, (exterior_z - badge_h) / 2]) cube([case_th + 2, badge_w, badge_h]);
   }
   // PSU intake vent grille
   translate([
@@ -357,12 +361,81 @@ module lid() {
   }
 }
 
-case();
+mx_w = 15;
+mx_h = 5.3;
+mx_travel = 3.3;
+mx_clip_w = 14;
+mx_clip_dw = (mx_w - mx_clip_w) / 2;
+mx_clip_dz = 3.1;
+mx_clip_th = 1.5;
+button_platform_th = 2;
+
+module ccube(dims) {
+  translate([0, 0, dims.z/2]) cube(dims, center=true);
+}
+
+
+
+module power_button() {
+  // Badge cube
+  translate([0, 0, mx_h])
+    ccube([badge_w, badge_h, badge_th + mx_travel + button_platform_th + 0.1]);
+  // Clip cube
+  ccube([mx_clip_w, mx_clip_w, mx_h + 0.1]);
+  // Key top cube
+  translate([0, 0, mx_h - mx_clip_dz])
+    ccube([mx_w, mx_w, mx_h - mx_clip_th + 0.1]);
+  // Key bot cube
+  translate([0, 0, -0.1])
+    ccube([mx_w, mx_w, mx_h - mx_clip_th - mx_clip_dz + 0.1]);
+}
+
+module power_button_housing(dw) {
+  difference() {
+    ccube([
+      dw + badge_w + dw,
+      dw + badge_h + dw,
+      badge_th + mx_travel + button_platform_th + mx_h - case_th
+    ]);
+    power_button();
+  }
+}
+
+kailh_fin_w = 1.25;
+kailh_fin_l = 3;
+kailh_fin_h = 3;
+kailh_fin_spacing = 4.5;
+
+module kailh_staple() {
+  ccube([kailh_fin_spacing + kailh_fin_w*2, kailh_fin_l, button_platform_th/2]);
+  translate([-kailh_fin_spacing/2 - kailh_fin_w/2, 0, 0])
+    ccube([kailh_fin_w, kailh_fin_l, button_platform_th + kailh_fin_h]);
+  translate([ kailh_fin_spacing/2 + kailh_fin_w/2, 0, 0])
+    ccube([kailh_fin_w, kailh_fin_l, button_platform_th + kailh_fin_h]);
+}
+
+module button_platform() {
+  difference() {
+    ccube([badge_w, badge_h, button_platform_th]);
+    kailh_staple();
+  }
+}
+
+// case();
 
 // translate([-exterior_x - 5, 0, 0])
-translate([0, 0, exterior_z + 10])
-  lid();
+// translate([0, 0, exterior_z + 10])
+//   lid();
 
+
+translate([2 * badge_w, 0])
+  button_platform();
+kailh_staple();
+
+translate([0, 2 * badge_h]) {
+  translate([2 * badge_h, 0]) power_button();
+  power_button_housing(5);
+}
 
 // Test print:
 // (1) Base with mounts and psu fence
@@ -388,11 +461,14 @@ module base_test() {
   }
 }
 
+// base_test();
+
 // (2)
 module rear_test() {
   rotate([0, 90, 0]) {
     intersection() {
-      cube([case_th, exterior_y, exterior_z]);
+      // cube([case_th, exterior_y, exterior_z]);
+      cube([case_th, exterior_y, case_th + fan_d / 2]);
       case();
     }
   }
