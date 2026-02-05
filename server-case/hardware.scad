@@ -2,7 +2,19 @@ function dHex(e2e) = e2e / sin(60);
 function rHex(e2e) = dHex(e2e) / 2;
 
 module Hex(e2e, h) {
-  cylinder(d = dHex(e2e), h = h, $fn = 6);
+  r = rHex(e2e);
+  x = r * cos(30);
+  y = r * sin(30);
+  linear_extrude(h) {
+    polygon([
+      [ r,  0],
+      [ y,  x],
+      [-y,  x],
+      [-r,  0],
+      [-y, -x],
+      [ y, -x],
+    ]);
+  }
 }
 
 function dThread(std) =
@@ -86,8 +98,6 @@ module CaseScrew(thread_padding = 0, head_padding = 0) {
   );
 }
 
-CaseScrew(0, 0, $fn = 32);
-
 module HillmanNut() {
   Hex(8, 3);
 }
@@ -100,9 +110,4 @@ module HillmanScrew(thread_padding = 0, head_padding = 0) {
     head_l2 = 0.75,
     head_d = 6.5
   );
-}
-
-translate([10, 10]) {
-  HillmanScrew(0, 0, $fn = 32);
-  HillmanNut();
 }

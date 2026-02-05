@@ -1,3 +1,7 @@
+include <server-case/hardware.scad>
+include <server-case/motherboard-measurements.scad>
+
+
 $fn = 64;
 
 module ccube(dims) {
@@ -40,20 +44,6 @@ nut_th = 3;
 ext_nut_th = 6.5;
 ext_nut_e2e = 4.9;
 
-//
-//        top_h
-//    mobo_h  │
-//         ├──├─              ┌────┐
-//         │  │               │────│
-//         │  │               │    │
-//         │  │               │    │
-//         │  │               │    │
-//         │  │               │    │
-//         │  └─           ┌──┘    └──┐
-//         └──── ──────────┤          ├──────────
-//                         │          │
-//               ──────────┴──────────┴──────────
-//
 nut_h = max(nut_th, case_th);
 mount_bot_d = case_th + hex_d(nut_e2e) + case_th;
 mount_bot_r = mount_bot_d / 2;
@@ -63,7 +53,7 @@ mount_top_r = mount_top_d / 2;
 mount_top_h = ext_nut_th + 0.5 - case_th;
 mount_h = mount_bot_h + mount_top_h;
 
-nut_slot_x = case_th + hex_d(nut_e2e);
+nut_slot_x = dHex(nut_e2e);
 nut_slot_y = case_th + nut_e2e;
 nut_slot_z = case_th + nut_th + case_th;
 
@@ -87,9 +77,9 @@ io_y = mobo_y - mobo_io_dy1 + mobo_io_dy2;
 io_z = 50;
 mobo_io_dz = -6;
 
-interior_x = mobo_x + cable_cavity_x;
-interior_y = psu_y + case_th + max(mobo_y + mobo_io_dy2, mobo_screw_y2 + mount_bot_r) + case_th;
-interior_z = max(psu_z, mobo_h + 77 - case_th);
+interior_x = atx_io_overhang_x + mini_itx_x + cable_cavity_x;
+interior_y = psu_y + case_th + mini_itx_y + atx_io_overhang_y + 6;
+interior_z = max(psu_z, atx_dz + 77 - case_th);
 exterior_x = case_th + interior_x + case_th;
 exterior_y = case_th + interior_y + case_th;
 exterior_z = case_th + interior_z + case_th;
@@ -134,53 +124,45 @@ module badge() {
 // Case
 //
 
-module psu() {
-  cube([psu_x, psu_y, psu_z]);
-  // Vent protrusion - not a real protrusion, there to make sure the case leaves space
-  translate([psu_x - vent_x - vent_dx, -4, (psu_z - vent_z) / 2])
-    cube([vent_x, 5, vent_z]);
-  // Fan protrusion - not a real protrusion, there to make sure the case leaves space
-  translate([-5, psu_y / 2, fan_dz])
-    rotate([0, 90, 0])
-      cylinder(d=fan_d, h=5);
-  // Bottom left screw hole, near the power plug.
-  translate([screw_thread_h - case_th, psu_y - 3.5, psu_z - 15.5]) rotate([0, -90, 0]) screw();
-  // Top left screw hole, near the fan, opposite power.
-  translate([screw_thread_h - case_th, psu_y - 4.75, 5.75]) rotate([0, -90, 0]) screw();
-  // Top right screw hole, near the fan, same side as power.
-  translate([screw_thread_h - case_th, 4.5, 5.75]) rotate([0, -90, 0]) screw();
-  // Power plug.  Uses th instead of power_x so it punches through the faceplate.
-  translate([-power_x, power_dy, psu_z - power_z - power_dz])
-    cube([power_x, power_y, power_z]);
-  // Cables
-  translate([psu_x, 0.01, cable_dz])
-    cube([5, cable_y, cable_z]);
-  // Cable side screw
-  translate([psu_x - screw_thread_h + case_th, 14.6, 5]) rotate([0, 90, 0]) screw();
-  translate([psu_x - screw_thread_h + case_th, psu_y - 9, 5]) rotate([0, 90, 0]) screw();
-}
-
-module mobo() {
-  // The mobo
-  difference() {
-    cube([mobo_x, mobo_y, mobo_th]);
-    translate([mobo_screw_x1 , mobo_screw_y1, -1]) cylinder(d=hole_d, h=mobo_th+2);
-    translate([mobo_screw_x1b, mobo_screw_y2, -1]) cylinder(d=hole_d, h=mobo_th+2);
-    translate([mobo_screw_x2 , mobo_screw_y1, -1]) cylinder(d=hole_d, h=mobo_th+2);
-    translate([mobo_screw_x2 , mobo_screw_y2, -1]) cylinder(d=hole_d, h=mobo_th+2);
-  }
-  // The IO shield
-  translate([-io_x, mobo_y - io_y + mobo_io_dy2, mobo_io_dz])
-    cube([io_x, io_y, io_z]);
-}
-
 // 6-32 steel nut + threaded standoff slot
+//
+// ━━━━━━━━━━━━╶┬╴     ╶┬╴
+// ━━━━━━━━━━━━╶┼╴ 2    │
+//     ┃  ┃     │       │ 10
+//    ┏┛  ┗┓    │ 6.35  │
+//    ┃╺══╸┃    │      ╶┼╴
+// ━━━┫    ╊━━━╶┴╴     ╶┴╴
+// ━━━┻━━━━┻━━━
+//
+
+mount_r1 = rHex(nut_e2e) + case_th;
+
 module mount() {
-  union() {
-    cylinder(r=mount_bot_r, h=mount_bot_h);
-    translate([0, 0, mount_bot_h])
-      cylinder(r=mount_top_r, h=mount_top_h);
+  // Bottom of exterior to top of mobo
+  mobo_top_h = case_th + 6.35 + mobo_th;
+  nut_top_h = mobo_top_h - 10 + nut_th;
+  h1 = nut_top_h + case_th;
+  // Bottom
+  difference() {
+    cylinder(r = mount_r1, h = h1);
+    translate([0, 0, -1])
+      Hex(nut_e2e, h = h1 + 1);
   }
+  // Top
+  r2 = rThread("6-32") + case_th;
+  translate([0, 0, h1]) {
+    difference() {
+      cylinder(r = r2, h=mount_top_h);
+      translate([0, 0, -1])
+        cylinder(r = rThread("6-32"), h = mount_top_h + 2);
+    }
+  }
+}
+
+module forEachMount() {
+  for (hole = "CFHJ")
+    translate(mitxMountingHole(hole))
+      children();
 }
 
 module nut_slot() {
@@ -200,19 +182,42 @@ module nut_slot() {
   }
 }
 
+// Relative to the case interior.
+module ForEachLidMount() {
+  dx = nut_slot_x / 2;
+  dy = nut_slot_y / 2;
+  points = [
+    [             dx,              dy + psu_y + 1/2], // +1/2 tolerance
+    [             dx, interior_y - dy],
+    [interior_x - dx,              dy],
+    [interior_x - dx, interior_y - dy],
+  ];
+  if ($children == 4) {
+    for (i = [0 : 3]) {
+      translate(points[i]) children(i);
+    }
+  }
+  else {
+    for (point = points) {
+      translate(point) children();
+    }
+  }
+}
+
 module grille(w, h, tilt, twist) {
-  spacing = case_th * 2;
+  th = case_th / 2;
+  spacing = th * 6;
   l = h / cos(tilt);
-  slat_dx = h * sin(tilt);
+  slat_dx = l * sin(abs(tilt));
   count = (w + slat_dx) / spacing;
   intersection() {
-    translate([-slat_dx, 0, 0]) {
+    translate([tilt > 0 ? -slat_dx : 0, 0, 0]) {
       for (i = [0:count]) {
         translate([i*spacing, 0, 0])
         rotate([0, tilt,     0])
         rotate([0,    0, twist])
         translate([0, -1, -1])
-          cube([case_th/2, case_th+2, l+3]);
+          cube([th, case_th+2, l + spacing]);
       }
     }
     cube([w, case_th, h]);
@@ -223,47 +228,22 @@ module case() {
   difference() {
     // Case perimeter
     union() {
-      // Baseplate of the case with standoffs and the holes for hex mounting nuts.
-      // Standoffs do not get a z translation, they're designed for access from the
-      // exterior, so they're modeled including the case_th.
       difference() {
-        union() {
-          cube([exterior_x, exterior_y, case_th]);
-          translate([case_th + mobo_dx, case_th + psu_y + case_th]) {
-            translate([mobo_screw_x1 , mobo_screw_y1]) mount();
-            translate([mobo_screw_x1b, mobo_screw_y2]) mount();
-            translate([mobo_screw_x2 , mobo_screw_y1]) mount();
-            translate([mobo_screw_x2 , mobo_screw_y2]) mount();
-          }
-        }
-        translate([case_th + mobo_dx, case_th + psu_y + case_th]) {
-          translate([mobo_screw_x1 , mobo_screw_y1, -1]) {
-            hex(nut_e2e, h=nut_h+1);
-            translate([0, 0, nut_h])
-              cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
-          }
-          translate([mobo_screw_x1b, mobo_screw_y2, -1]) {
-            hex(nut_e2e, h=nut_h+1);
-            translate([0, 0, nut_h])
-              cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
-          }
-          translate([mobo_screw_x2 , mobo_screw_y1, -1]) {
-            hex(nut_e2e, h=nut_h+1);
-            translate([0, 0, nut_h])
-              cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
-          }
-          translate([mobo_screw_x2 , mobo_screw_y2, -1]) {
-            hex(nut_e2e, h=nut_h+1);
-            translate([0, 0, nut_h])
-              cylinder(r=hex_r(ext_nut_e2e), h=case_th + mount_top_h + 2);
-          }
-        }
+        cube([exterior_x, exterior_y, case_th]);
+        // Punch a hole for each mount.
+        translate([case_th + mobo_dx, case_th + psu_y + case_th, -1])
+          forEachMount() cylinder(r = mount_r1, h = case_th + 2);
       }
+      // Instantiate the mounts.
+      translate([case_th + mobo_dx, case_th + psu_y + case_th])
+        forEachMount() mount();
       // PSU fence
       translate([case_th, case_th, case_th]) {
         th = case_th / 2;
-        translate([psu_x + th/2,            0, 0]) cube([               th, psu_y + th + th/2, mobo_h]);
-        translate([           0, psu_y + th/2, 0]) cube([psu_x + th + th/2,                th, mobo_h]);
+        x = psu_x + th + th/2;
+        y = psu_y + th + th/2;
+        translate([psu_x + th/2,            0, 0]) cube([th,  y, case_th*2]);
+        translate([           0, psu_y + th/2, 0]) cube([ x, th, case_th*2]);
       }
       // Sides of the case, all z dimensions are - case_th to leave space for the lid.
       cube([case_th, exterior_y, exterior_z - case_th]);
@@ -272,20 +252,22 @@ module case() {
       cube([exterior_x, case_th, exterior_z - case_th]);
       translate([0, exterior_y - case_th, 0])
         cube([exterior_x, case_th, exterior_z - case_th]);
-      // Nut mounting brackets
-      translate([case_th, case_th]) {
-        translate([case_screw_x1, case_screw_y1b, case_th + interior_z - nut_slot_z]) nut_slot();
-        translate([case_screw_x1, case_screw_y2, case_th + interior_z - nut_slot_z]) nut_slot();
-        translate([case_screw_x2, case_screw_y1, case_th + interior_z - nut_slot_z]) mirror([1, 0, 0]) nut_slot();
-        translate([case_screw_x2, case_screw_y2, case_th + interior_z - nut_slot_z]) mirror([1, 0, 0]) nut_slot();
+      // Lid mounting brackets
+      translate([case_th, case_th, exterior_z - case_th - nut_slot_z]) {
+        ForEachLidMount() {
+          nut_slot();
+          nut_slot();
+          mirror([1, 0, 0]) nut_slot();
+          mirror([1, 0, 0]) nut_slot();
+        }
       }
     } // union Case perimeter
     // IO hole
     translate([
       -1,
-      case_th + psu_y + case_th + mobo_y + mobo_io_dy2 - io_y,
-      case_th + mobo_h + mobo_io_dz
-    ]) cube([case_th+2, io_y, io_z]);
+      case_th + psu_y + case_th + atx_io_dy,
+      case_th + atx_dz + atx_io_dz(mobo_th)
+    ]) cube([case_th+2, atx_io_w, atx_io_h]);
     // CPU intake vent hole
     translate([
       case_th + heatsink_dx,
@@ -326,17 +308,6 @@ module case() {
       case_th + psu_y - 4.5,
       case_th + 5.75
     ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
-    // PSU screws, front
-    translate([
-      case_th + psu_x - 1,
-      case_th + 14.6,
-      case_th + 5
-    ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
-    translate([
-      case_th + psu_x - 1,
-      case_th + psu_y - 9,
-      case_th + 5
-    ]) rotate([0, 90, 0]) cylinder(d=screw_thread_d, h=case_th+2);
 
     // Noctua badge power button hole
     translate([exterior_x - case_th - 1, (exterior_y - badge_w) / 2, (exterior_z - badge_w) / 2]) cube([case_th + 2, badge_w, badge_w]);
@@ -346,13 +317,19 @@ module case() {
     case_th + psu_x - vent_x - vent_dx,
     0,
     case_th + (psu_z - vent_z) / 2
-  ]) grille(vent_x, vent_z, 30, 30);
+  ]) {
+    grille(vent_x, vent_z,  45, 30);
+    grille(vent_x, vent_z, -45, 30);
+  }
   // CPU intake vent grille
   translate([
     case_th + heatsink_dx,
     case_th + interior_y,
     case_th + mobo_h + mobo_th
-  ]) grille(heatsink_x, 40, 30, -30);
+  ]) {
+    grille(heatsink_x, 40,  45, -30);
+    grille(heatsink_x, 40, -45, -30);
+  }
 }
 
 
@@ -441,13 +418,13 @@ module lid() {
     cube([support_w, interior_y - y_support_dy + case_th - support_gap, support_h]);
 }
 
-translate([exterior_x, 0, case_th + 4]) rotate([0, 180, 0])
-  lid();
+// translate([exterior_x, 0, case_th + 4]) rotate([0, 180, 0])
+//   lid();
 
 // translate([0, 0, exterior_z + 5])
 //   lid();
 
-// case();
+case();
 
 //
 // Power button
