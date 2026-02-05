@@ -18,49 +18,22 @@ segments   = ceil(out_w / bed_w);
 conn_step  = (out_w - conn_w) / segments;
 conn_dzs = [for (i = [0 : conn_step : out_w]) i ];
 
-module TopConnector() {
-  w = wFrame(ctype);
-  rotate([0, 0, -90]) {
-    linear_extrude(conn_w) {
-      Channel(ctype);
-      polygon([
-        [-w/2,   0],
-        [-w/2,  th],
-        [ w/2, w/2],
-        [ w/2,   0]
-      ]);
-    }
+module BotConnector() {
+  linear_extrude(out_w) {
+    translate([wFrame(ctype)/2, 0]) Channel(ctype);
   }
 }
 
-module BotConnector() {
-  w = wFrame(ctype);
-  mirror([0, 1, 0]) {
-    linear_extrude(conn_w) {
-      Channel(ctype);
-      polygon([
-        [-w/2,    0],
-        [-w/2,   th],
-        [ w/2, 2*th],
-        [ w/2+in_d+th, th],
-        [ w/2+in_d+th, th],
-        [ w/2,    0]
-      ]);
-    }
-  }
+module TopConnector() {
+  mirror([0, 1, 0]) BotConnector();
 }
 
 module Connectors() {
-  for (i = conn_dzs) {
-    translate([0, th+in_h+25/2, i]) {
-      TopConnector();
-    }
-    translate([-25/2, th, i]) {
-      BotConnector();
-    }
+  translate([0, th+in_h+th]) {
+    TopConnector();
   }
+  BotConnector();
 }
-
 
 module Interior() {
   translate([-1, 0, -1]) linear_extrude(out_w+2) square([in_d+1, in_h]);
@@ -82,28 +55,4 @@ module Caddy() {
   Connectors();
 }
 
-module CaddyPart(n) {
-  dzs = [
-    0,
-    conn_dzs[1] + conn_w/2,
-    conn_dzs[2] + conn_w/2,
-    out_w,
-  ];
-  dx = wFrame("25");
-  dy = th;
-  translate([0, 0, -dzs[n]]) {
-    intersection() {
-      translate([-dx, -dy, dzs[n]]) cube([dx + out_d, dy + out_h + wFrame("25"), dzs[n+1]-dzs[n]]);
-      Caddy();
-    }
-  }
-}
-
-module Parts() {
-  dx = wFrame("25") + out_d + 3;
-  CaddyPart(0);
-  translate([dx, 0]) CaddyPart(1);
-  translate([dx * 2, 0]) CaddyPart(2);
-}
-
-Parts();
+Caddy();
