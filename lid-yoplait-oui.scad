@@ -5,7 +5,7 @@ inner_d = 55;
 outer_d = 67;
 
 upper_th = 3;
-lower_th = 5;
+lower_th = 6;
 
 groove_id = 46;
 groove_od = 57;
@@ -14,7 +14,7 @@ groove_depth = 1;
 oring_th = 2;
 oring_depth = 1.5;
 oring_id = inner_d - (2 * oring_depth);
-oring_offset = 1;
+oring_offset = 2;
 
 module oring() {
   rotate_extrude()
@@ -43,6 +43,4 @@ module lid() {
   }
 }
 
-// groove();
 lid();
-// oring();
