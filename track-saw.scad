@@ -12,30 +12,32 @@ lever_h = deck_h + 9;
 lip_dx = 7.5;
 bushing_th = 4.5;
 
+mount_dx = 39.25;
+front_mount_r = 12;
+front_mount_d = front_mount_r * 2;
+rear_mount_r = 10;
+rear_mount_d = rear_mount_r * 2;
+
 hole_d = 6.25;
 hole_r = hole_d / 2;
 hole_h = 3.25;
 hole_h1 = 2.25;
 hole_h2 = hole_h - hole_h1;
-hole_base_d = 11;
+hole_base_d = 12;
 hole_base_r = hole_base_d / 2;
-hole_base_w = 16.5;
-// Distance from the edge of the deck to the opening.
-hole_dx = 36.5;
+hole_base_w = 15.5;
 // Distance from the bottom of the deck to the center of the hole.
 hole_dy = 13.35 - hole_r;
 // Center to center distance between the holes.
 hole_spacing = 118;
 
-mount_r = 11;
-mount_d = mount_r * 2;
-
+blade_d = 87;
 blade_dy = 23;
 // From the front hole.
-blade_dz = -45.5;
+blade_dz = 45.5;
 
 module Blade(h) {
-  rotate([0, 90, 0]) cylinder(d = 87, h = h);
+  rotate([0, 90, 0]) cylinder(d = blade_d, h = h);
 }
 
 module TrackInterface(h) {
@@ -88,7 +90,7 @@ module NutSlot() {
     hole_dy - rHex(e2e),
     -z / 2
   ]) {
-    cube([x, hole_dy + mount_r + 1, z]);
+    cube([x, 50, z]);
   }
   // Bolt hole, lag bolts are ~75mm long.
   translate([0, hole_dy, 0])
@@ -96,39 +98,36 @@ module NutSlot() {
       cylinder(d = dThread("6-32"), h = 75);
 }
 
-module RearPylonTop() {
-  translate([0, hole_dy, 0]) {
-    intersection() {
-      rotate([0, 90, 0])
-        cylinder(r = mount_r, h = hole_dx + hole_h);
-      translate([0, 0, -mount_r])
-        cube([hole_dx + hole_h, mount_r, mount_d]);
-    }
-  }
-}
-
-// Offset by deck_th + deck_r to get out of the way of the deck edge.
-module RearPylonBot() {
-  h = hole_dy - deck_th;
-  dx = deck_th + deck_r;
-  translate([dx, deck_th, -mount_r]) cube([hole_dx - dx + hole_h, h, mount_d]);
-}
-
-module RearPylon() {
+module Pylon(r) {
   difference() {
     union() {
-      TrackInterface(mount_r);
+      TrackInterface(r);
       intersection() {
-        DeckInterface(mount_r);
-        cube([deck_th + deck_r, hole_dy, mount_r]);
+        DeckInterface(r);
+        cube([deck_th + deck_r, hole_dy, r]);
       }
-      translate([0, 0, mount_r]) {
-        RearPylonTop();
-        RearPylonBot();
+      translate([0, 0, r]) {
+        translate([0, hole_dy, 0]) {
+          intersection() {
+            rotate([0, 90, 0])
+              cylinder(r = r, h = mount_dx);
+            translate([0, 0, -r])
+              cube([mount_dx, r, r * 2]);
+          }
+        }
+        translate([deck_th + deck_r, deck_th, -r])
+          cube([mount_dx - deck_th - deck_r, hole_dy - deck_th, r * 2]);
       }
     }
-    translate([hole_dx, hole_dy, mount_r]) rotate([0, 90, 0]) cylinder(d = hole_d, h = hole_h1);
-    translate([hole_dx + hole_h1, hole_dy, mount_r]) {
+    translate([mount_dx - hole_h, hole_dy, r]) {
+      rotate([0, 90, 0]) {
+        linear_extrude(hole_h1 + 1) {
+          circle(d = hole_d);
+          translate([-hole_r, -hole_dy]) square([hole_d, hole_dy]);
+        }
+      }
+    }
+    translate([mount_dx - hole_h2, hole_dy, r]) {
       rotate([0, 90, 0]) {
         linear_extrude(hole_h2 + 1) {
           circle(d = hole_base_d);
@@ -145,22 +144,33 @@ module RearPylon() {
 }
 
 module FrontPylon() {
-  translate([0, 0, mount_d]) mirror([0, 0, 1]) RearPylon();
+  difference() {
+    Pylon(front_mount_r);
+    translate([deck_th + lip_dx, blade_dy, front_mount_r + blade_dz])
+      Blade(mount_dx + 1);
+    translate([mount_dx - hole_h2, 0, front_mount_r - hole_base_r])
+      cube([5, front_mount_d, front_mount_d]);
+    translate([-0.1, lever_h, 0])
+      cube([mount_dx + 1, 20, front_mount_d]);
+  }
+}
+
+module RearPylon() {
+  mirror([0, 0, 1]) Pylon(rear_mount_r);
 }
 
 
 difference() {
   union() {
-    translate([0, 0, mount_r]) Interface(hole_spacing);
-    RearPylon();
-    translate([0, 0, hole_spacing])
-      FrontPylon();
+    translate([0, 0, front_mount_r])
+      Interface(hole_spacing);
+    FrontPylon();
+    translate([0, 0, front_mount_r + hole_spacing + rear_mount_r])
+      RearPylon();
   }
-  translate([0, 0, mount_r]) {
+  translate([0, 0, front_mount_r]) {
     NutSlot();
     translate([0, 0, hole_spacing]) NutSlot();
-    translate([deck_th + lip_dx, blade_dy, hole_spacing + blade_dz])
-      Blade(hole_dx);
   }
 }
 
