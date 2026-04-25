@@ -4,8 +4,10 @@ use <t-track.scad>
 $fn = 64;
 
 track = "25";
+side = "L";
+assert(side == "L" || side == "R", "side must be 'L' or 'R'");
 
-spool_w = 70;
+spool_w = 67;
 spool_d = 202;
 spool_r = spool_d / 2;
 hole_d = 50;
@@ -17,10 +19,12 @@ spool_dx = spool_r;
 spool_dy = hanger_h / 2;
 rod_d = 35;
 rod_r = rod_d / 2;
+rod_dx = spool_dx;
+rod_dy = spool_dy + (side == "L" ? hole_r - rod_r : rod_r - hole_r);
 cap_d = rod_d + 8;
 cap_r = cap_d / 2;
-cap_th1 = 5;
-cap_th2 = 5;
+cap_th1 = 4;
+cap_th2 = 1;
 cap_th = cap_th1 + cap_th2;
 plat_d = hole_d + 10;
 plat_r = plat_d / 2;
@@ -43,21 +47,30 @@ module Cap() {
     cylinder(d = cap_d, h = cap_th2);
 }
 
-module Rod() {
-  difference() {
-    union() {
-      cylinder(d = rod_d, h = spool_w);
-      translate([0, 0, spool_w])
-        Cap();
-    }
-    translate([0, 0, -1])
-      cylinder(d = 2/3 * rod_d, h = spool_w + cap_th + 2);
-  }
-}
-
 module Base() {
   difference() {
-    cube([conn_th, hanger_h, wFrame(track)]);
+    union() {
+      // Connector
+      cube([conn_th, hanger_h, wFrame(track)]);
+      // Base
+      linear_extrude(base_th) {
+        polygon([
+          [ conn_th,        0],
+          [spool_dx, spool_dy - plat_r],
+          [spool_dx, spool_dy + plat_r],
+          [ conn_th, hanger_h],
+        ]);
+        translate([spool_dx, spool_dy])
+          circle(d = plat_d);
+      }
+      // Rod
+      translate([rod_dx, rod_dy, base_th]) {
+        cylinder(d = rod_d, h = spool_w);
+        translate([0, 0, spool_w])
+          Cap();
+      }
+    }
+    // Connector
     translate([spool_dx, spool_dy, base_th]) Spool();
     translate([-1, hanger_h / 2 - hole_r, base_th]) cube([conn_th + 2, hole_d, wFrame(track)]);
     screw_l = 13;
@@ -72,20 +85,7 @@ module Base() {
     translate([screw_dx, hanger_h - screw_dy, screw_dz])
       rotate([0, 90, 0])
         Screw(5, screw_l = screw_l, head_l = head_l, head_d = head_d, head_padding = conn_th);
-  }
-  difference() {
-    union() {
-      linear_extrude(base_th) {
-        polygon([
-          [ conn_th,        0],
-          [spool_dx, spool_dy - plat_r],
-          [spool_dx, spool_dy + plat_r],
-          [ conn_th, hanger_h],
-        ]);
-        translate([spool_dx, spool_dy])
-          circle(d = plat_d);
-      }
-    }
+    // Base
     translate([0, 0, -1]) {
       th = 15;
       dx = spool_dx - plat_r;
@@ -100,9 +100,13 @@ module Base() {
         ]);
       }
     }
-  }
-  translate([spool_dx, spool_dy, base_th]) {
-    Rod();
+    // Rod
+    translate([rod_dx, rod_dy, -1])
+      cylinder(d = 2/3 * rod_d, h = base_th + spool_w + cap_th + 2);
+    // Side text - 1/2mm relief
+    translate([8, spool_dy, base_th - 1 / 2])
+      linear_extrude(1) rotate([0, 0, side == "L" ? 0 : 180])
+        text(side, valign = "center", halign = "center");
   }
 }
 
